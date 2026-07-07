@@ -1,118 +1,10 @@
-<!DOCTYPE html>
-<html lang="th">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบเบิก-จ่ายน้ำมันและคลังสินค้า</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-</head>
-<body class="bg-gray-50 font-sans text-gray-800">
+<script>
+        // ⚠️ ใส่ URL และ Anon Key ของโปรเจกต์ Supabase ของคุณตรงนี้
+        const SUPABASE_URL = "https://YOUR_SUPABASE_PROJECT_URL.supabase.co";
+        const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_PUBLIC_KEY";
 
-    <nav class="bg-blue-600 text-white shadow-md">
-        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
-            <h1 class="text-xl font-bold flex items-center gap-2">
-                <i class="fas fa-gas-pump"></i> ระบบบริหารจัดการน้ำมันเชื้อเพลิง
-            </h1>
-            <span class="text-sm bg-blue-700 px-3 py-1 rounded-full"><i class="fas fa-sync-alt animate-spin mr-1"></i> Real-time Connected</span>
-        </div>
-    </nav>
-
-    <div class="container mx-auto px-4 py-8">
-        
-        <h2 class="text-lg font-semibold mb-4 text-gray-700 flex items-center gap-2">
-            <i class="fas fa-chart-pie text-blue-600"></i> แดชบอร์ดคงเหลือในคลังปัจจุบัน
-        </h2>
-        <div id="dashboard-container" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div class="bg-white p-6 rounded-xl shadow-xs border border-gray-100 animate-pulse text-center">กำลังโหลดข้อมูล...</div>
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div class="bg-white p-6 rounded-xl shadow-md border border-gray-100 h-fit">
-                <h2 class="text-lg font-semibold mb-4 text-gray-700 border-b pb-2 flex items-center gap-2">
-                    <i class="fas fa-edit text-blue-600"></i> บันทึกการ เบิก/รับ น้ำมัน
-                </h2>
-                <form id="transaction-form" class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-600 mb-1">ประเภทธุรกรรม</label>
-                        <div class="grid grid-cols-2 gap-2">
-                            <label class="flex items-center justify-center gap-2 border p-2.5 rounded-lg cursor-pointer bg-red-50 border-red-200 text-red-700 font-medium">
-                                <input type="radio" name="transaction_type" value="OUT" checked class="accent-red-600"> เบิกจ่ายน้ำมัน
-                            </label>
-                            <label class="flex items-center justify-center gap-2 border p-2.5 rounded-lg cursor-pointer bg-green-50 border-green-200 text-green-700 font-medium">
-                                <input type="radio" name="transaction_type" value="IN" class="accent-green-600"> รับน้ำมันเข้าคลัง
-                            </label>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-600 mb-1">ประเภทน้ำมัน</label>
-                        <select id="fuel_type" required class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                            </select>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-600 mb-1">ปริมาณ (ลิตร)</label>
-                        <input type="number" id="amount" step="0.01" min="0.01" required placeholder="0.00" class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-600 mb-1">ชื่อผู้ทำรายการ / ผู้เบิก</label>
-                        <input type="text" id="requester_name" required placeholder="ระบุชื่อ-นามสกุล" class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-600 mb-1">วัตถุประสงค์ / หมายเหตุ</label>
-                        <textarea id="purpose" rows="2" placeholder="ระบุเหตุผลการเบิก เช่น ทะเบียนรถ หรือ แผนก" class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
-                    </div>
-
-                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg shadow-md transition duration-200">
-                        <i class="fas fa-save mr-1"></i> บันทึกรายการ
-                    </button>
-                </form>
-            </div>
-
-            <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-md border border-gray-100">
-                <div class="flex justify-between items-center mb-4 border-b pb-2">
-                    <h2 class="text-lg font-semibold text-gray-700 flex items-center gap-2">
-                        <i class="fas fa-history text-blue-600"></i> ประวัติการทำธุรกรรมล่าสุด
-                    </h2>
-                    <button onclick="fetchData()" class="text-sm text-blue-600 hover:text-blue-800 font-medium">
-                        <i class="fas fa-sync"></i> รีเฟรชข้อมูล
-                    </button>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="bg-gray-100 text-gray-600 text-sm uppercase">
-                                <th class="p-3 rounded-l-lg">วัน-เวลา</th>
-                                <th class="p-3">ประเภท</th>
-                                <th class="p-3">ชนิดน้ำมัน</th>
-                                <th class="p-3 text-right">จำนวน (ลิตร)</th>
-                                <th class="p-3">ผู้ทำรายการ</th>
-                                <th class="p-3 rounded-r-lg">วัตถุประสงค์</th>
-                            </tr>
-                        </thead>
-                        <tbody id="transaction-rows" class="text-sm divide-y divide-gray-100">
-                            <tr>
-                                <td colspan="6" class="p-4 text-center text-gray-400">ยังไม่มีข้อมูลธุรกรรมในระบบ</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-    </div>
-
-    <script>
-        // ⚠️ สำคัญ: ใส่ URL และ Anon Key ของโปรเจกต์ Supabase ของคุณตรงนี้
-        const SUPABASE_URL = "https://epiagllllnqhgpgwarek.supabase.co";
-        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVwaWFnbGxsbG5xaGdwZ3dhcmVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM0MzMzMjEsImV4cCI6MjA5OTAwOTMyMX0.HLbFl-lt3LPWJ-We3UzpK5XkF5CXO4L0Ur9DBUkqIXc";
-
-        // สร้าง Instance เชื่อมต่อ Supabase
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // เปลี่ยนชื่อเป็น supabaseClient เพื่อไม่ให้ชนกับค่าเริ่มต้นของระบบ
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         // ฟังก์ชันหลักที่ทำงานเมื่อเปิดหน้าเว็บครั้งแรก
         document.addEventListener("DOMContentLoaded", () => {
@@ -127,7 +19,7 @@
         async function fetchData() {
             try {
                 // 1. ดึงคลังน้ำมัน
-                let { data: inventory, error: invError } = await supabase
+                let { data: inventory, error: invError } = await supabaseClient
                     .from('fuel_inventory')
                     .select('*')
                     .order('fuel_type', { ascending: true });
@@ -137,7 +29,7 @@
                 renderFuelDropdown(inventory);
 
                 // 2. ดึงประวัติธุรกรรม
-                let { data: transactions, error: txError } = await supabase
+                let { data: transactions, error: txError } = await supabaseClient
                     .from('fuel_transactions')
                     .select('*')
                     .order('created_at', { ascending: false })
@@ -163,7 +55,6 @@
             }
 
             inventory.forEach(item => {
-                // ปรับแต่งสีแสดงผลตามประเภทน้ำมันเบื้องต้น
                 let iconColor = "text-yellow-500";
                 if(item.fuel_type.includes("ดีเซล")) iconColor = "text-blue-500";
                 if(item.fuel_type.includes("E20")) iconColor = "text-green-500";
@@ -187,7 +78,7 @@
         // โหลดตัวเลือกน้ำมันใส่ Dropdown Select ในฟอร์ม
         function renderFuelDropdown(inventory) {
             const select = document.getElementById("fuel_type");
-            const currentValue = select.value; // บันทึกค่าที่เลือกไว้ก่อนหน้าถ้ามี
+            const currentValue = select.value;
             select.innerHTML = "";
             
             inventory.forEach(item => {
@@ -248,8 +139,7 @@
             }
 
             try {
-                // ส่งข้อมูลเข้าไปที่ตารางธุรกรรม (ระบบฝั่ง Database จะสั่ง Trigger เพื่อตัด/เพิ่ม ยอดน้ำมันให้อัตโนมัติ)
-                const { data, error } = await supabase
+                const { data, error } = await supabaseClient
                     .from('fuel_transactions')
                     .insert([
                         { transaction_type, fuel_type, amount, requester_name, purpose }
@@ -257,32 +147,26 @@
 
                 if (error) throw error;
 
-                // รีเซ็ตค่าในฟอร์ม ยกเว้นชื่อผู้ทำรายการและประเภทน้ำมันเพื่อความสะดวกรวดเร็วในการกรอกครั้งต่อไป
                 document.getElementById("amount").value = "";
                 document.getElementById("purpose").value = "";
                 
-                // แจ้งเตือนสั้นๆ และโหลดข้อมูลใหม่ทันที
                 alert("บันทึกธุรกรรมเรียบร้อยแล้วและคลังปรับปรุงสำเร็จ!");
                 fetchData();
 
             } catch (error) {
                 console.error("เกิดข้อผิดพลาด: ", error.message);
-                // ดึงข้อผิดพลาดจาก Trigger เช่น ถ้าน้ำมันไม่พอบันทึกเบิก
                 alert("ไม่สามารถทำรายการได้: " + error.message);
             }
         }
 
-        // ระบบ Real-time Listening (ดักฟังการเปลี่ยนแปลงที่เกิดขึ้นในฐานข้อมูลแล้วรีเฟรชหน้าจออัตโนมัติ)
+        // ระบบ Real-time Listening
         function setupRealtime() {
-            // ดักฟังการอัปเดตของตารางคลังสินค้า และรายการเดินบัญชี
-            supabase
+            supabaseClient
                 .channel('fuel_changes_channel')
                 .on('postgres_changes', { event: '*', filter: '*:*', schema: 'public' }, (payload) => {
                     console.log('พบการเปลี่ยนแปลงแบบเรียลไทม์:', payload);
-                    fetchData(); // ดึงข้อมูลและอัปเดต Dashboard / ตารางธุรกรรมทันที
+                    fetchData();
                 })
                 .subscribe();
         }
     </script>
-</body>
-</html>
