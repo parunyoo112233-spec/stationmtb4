@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบจัดการ รับ-เบิก-จ่าย น้ำมันเชื้อเพลิง</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans">
+
+    <nav class="bg-gradient-to-r from-blue-700 to-indigo-800 text-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <i class="fa-solid fa-gas-pump text-3xl text-yellow-400"></i>
+                <span class="text-xl font-bold tracking-wider">Fuel System WebApp</span>
+            </div>
+            <div class="text-sm bg-blue-900 bg-opacity-40 px-3 py-1.5 rounded-lg border border-blue-400 border-opacity-30">
+                <i class="fa-solid fa-sync fa-spin mr-1"></i> เชื่อมต่อฐานข้อมูล Supabase แล้ว
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
+
+        <section>
+            <h2 class="text-xl font-bold mb-4 flex items-center text-gray-700">
+                <i class="fa-solid fa-chart-pie mr-2 text-blue-600"></i> แดชบอร์ดสรุปข้อมูลเรียลไทม์
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500 font-medium">คงเหลือ คลังดีเซล</p>
+                        <h3 id="dash-diesel-stock" class="text-2xl font-bold text-gray-800 mt-1">0.00 <span class="text-sm font-normal text-gray-500">ลิตร</span></h3>
+                    </div>
+                    <div class="p-3 bg-amber-50 text-amber-600 rounded-lg"><i class="fa-solid fa-truck-droplet text-2xl"></i></div>
+                </div>
+
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500 font-medium">คงเหลือ คลังเบนซิน</p>
+                        <h3 id="dash-gasoline-stock" class="text-2xl font-bold text-gray-800 mt-1">0.00 <span class="text-sm font-normal text-gray-500">ลิตร</span></h3>
+                    </div>
+                    <div class="p-3 bg-red-50 text-red-600 rounded-lg"><i class="fa-solid fa-fire-flame-simple text-2xl"></i></div>
+                </div>
+
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500 font-medium">ยอดจัดสรรรวมทุกหน่วยงาน</p>
+                        <h3 id="dash-total-allocated" class="text-2xl font-bold text-blue-600 mt-1">0.00 <span class="text-sm font-normal text-gray-500">ลิตร</span></h3>
+                    </div>
+                    <div class="p-3 bg-blue-50 text-blue-600 rounded-lg"><i class="fa-solid fa-building-user text-2xl"></i></div>
+                </div>
+
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500 font-medium">ยอดใช้ไปรวมทั้งหมด</p>
+                        <h3 id="dash-total-used" class="text-2xl font-bold text-emerald-600 mt-1">0.00 <span class="text-sm font-normal text-gray-500">ลิตร</span></h3>
+                    </div>
+                    <div class="p-3 bg-emerald-50 text-emerald-600 rounded-lg"><i class="fa-solid fa-oil-can text-2xl"></i></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+                <div class="flex items-center space-x-2 pb-3 mb-4 border-b border-gray-100">
+                    <i class="fa-solid fa-arrow-down-long text-emerald-600 text-lg"></i>
+                    <h3 class="font-bold text-gray-700">1. รับน้ำมันเข้าคลัง (RECEIVE)</h3>
+                </div>
+                <form id="form-receive" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-gray-500 mb-1">ประเภทน้ำมัน</label>
+                        <select name="fuel_type" class="w-full p-2 border rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none" required>
+                            <option value="Diesel B7">Diesel B7</option>
+                            <option value="Gasoline 95">Gasoline 95</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-gray-500 mb-1">จำนวน (ลิตร)</label>
+                        <input type="number" step="0.01" name="amount" placeholder="0.00" class="w-full p-2 border rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none" required>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-gray-500 mb-1">หมายเหตุ</label>
+                        <input type="text" name="notes" placeholder="เช่น เลขที่ใบเสร็จรับเข้า" class="w-full p-2 border rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 rounded-lg transition-colors shadow-sm">บันทึกรับน้ำมัน</button>
+                </form>
+            </div>
+
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+                <div class="flex items-center space-x-2 pb-3 mb-4 border-b border-gray-100">
+                    <i class="fa-solid fa-sliders text-indigo-600 text-lg"></i>
+                    <h3 class="font-bold text-gray-700">2. ตั้งยอดบัญชีหน่วยงาน (ALLOCATE)</h3>
+                </div>
+                <form id="form-allocate" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-gray-500 mb-1">หน่วยงาน / แผนก</label>
+                        <select name="department_id" id="select-dept-allocate" class="w-full p-2 border rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none" required>
+                            </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-gray-500 mb-1">ประเภทน้ำมัน</label>
+                        <select name="fuel_type" class="w-full p-2 border rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none" required>
+                            <option value="Diesel B7">Diesel B7</option>
+                            <option value="Gasoline 95">Gasoline 95</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-gray-500 mb-1">จำนวนที่จัดสรร (ลิตร)</label>
+                        <input type="number" step="0.01" name="amount" placeholder="0.00" class="w-full p-2 border rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none" required>
+                    </div>
+                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 rounded-lg transition-colors shadow-sm">ตั้ง/เพิ่ม ยอดบัญชี</button>
+                </form>
+            </div>
+
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+                <div class="flex items-center space-x-2 pb-3 mb-4 border-b border-gray-100">
+                    <i class="fa-solid fa-arrow-up-long text-red-600 text-lg"></i>
+                    <h3 class="font-bold text-gray-700">3. เบิกจ่ายน้ำมัน (WITHDRAW)</h3>
+                </div>
+                <form id="form-withdraw" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-gray-500 mb-1">หน่วยงานที่มาเบิก</label>
+                        <select name="department_id" id="select-dept-withdraw" class="w-full p-2 border rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none" required>
+                            </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-gray-500 mb-1">ประเภทน้ำมัน</label>
+                        <select name="fuel_type" class="w-full p-2 border rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none" required>
+                            <option value="Diesel B7">Diesel B7</option>
+                            <option value="Gasoline 95">Gasoline 95</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-gray-500 mb-1">จำนวนเบิก (ลิตร)</label>
+                        <input type="number" step="0.01" name="amount" placeholder="0.00" class="w-full p-2 border rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none" required>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-gray-500 mb-1">รายละเอียดเพิ่มเติม</label>
+                        <input type="text" name="notes" placeholder="เช่น ทะเบียนรถ, ชื่อผู้ขับ" class="w-full p-2 border rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-2 rounded-lg transition-colors shadow-sm">บันทึกการเบิกจ่าย</button>
+                </form>
+            </div>
+        </section>
+
+        <section class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+            <h2 class="text-xl font-bold mb-4 flex items-center text-gray-700">
+                <i class="fa-solid fa-chart-bar mr-2 text-indigo-600"></i> ยอดบัญชีคงเหลือของแต่ละหน่วยงาน
+            </h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-100 text-gray-600 uppercase text-xs tracking-wider">
+                            <th class="p-3 rounded-l-lg">หน่วยงาน / แผนก</th>
+                            <th class="p-3">ประเภทน้ำมัน</th>
+                            <th class="p-3 text-right">ยอดที่ได้รับจัดสรร (ลิตร)</th>
+                            <th class="p-3 text-right">ใช้ไปแล้ว (ลิตร)</th>
+                            <th class="p-3 text-right rounded-r-lg">คงเหลือใช้งานได้ (ลิตร)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-budgets" class="divide-y divide-gray-100 text-sm">
+                        </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+            <h2 class="text-xl font-bold mb-4 flex items-center text-gray-700">
+                <i class="fa-solid fa-history mr-2 text-gray-600"></i> ประวัติการทำธุรกรรมทั้งหมดในระบบ
+            </h2>
+            <div class="overflow-x-auto max-h-96 overflow-y-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead class="sticky top-0 bg-gray-100 shadow-sm text-gray-600 uppercase text-xs tracking-wider">
+                        <tr>
+                            <th class="p-3">วัน-เวลา</th>
+                            <th class="p-3">ประเภทธุรกรรม</th>
+                            <th class="p-3">ชนิดน้ำมัน</th>
+                            <th class="p-3">หน่วยงานที่เกี่ยวข้อง</th>
+                            <th class="p-3 text-right">จำนวน (ลิตร)</th>
+                            <th class="p-3">บันทึก/หมายเหตุ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-transactions" class="divide-y divide-gray-100 text-sm">
+                        </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="text-center py-6 text-xs text-gray-400 border-t border-gray-200 bg-white mt-12">
+        &copy; 2026 Fuel Management WebApp System - Powered by Supabase & GitHub
+    </footer>
+
+    <script>
+        // 1. ตั้งค่าเชื่อมต่อฐานข้อมูล Supabase
+        const SUPABASE_URL = "https://epiagllllnqhgpgwarek.supabase.co"; 
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVwaWFnbGxsbG5xaGdwZ3dhcmVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM0MzMzMjEsImV4cCI6MjA5OTAwOTMyMX0.HLbFl-lt3LPWJ-We3UzpK5XkF5CXO4L0Ur9DBUkqIXc"; 
+        
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // 2. โหลดฟังก์ชันการทำงานหลักเมื่อเปิดหน้าเว็บ
+        document.addEventListener("DOMContentLoaded", () => {
+            fetchDashboard();
+            fetchDepartments();
+            fetchBudgets();
+            fetchTransactions();
+        });
+
+        // ฟังก์ชันดึงค่าคลังน้ำมันหลักแสดงบน แดชบอร์ด
+        async function fetchDashboard() {
+            let { data: inventory } = await supabase.from('fuel_inventory').select('*');
+            if (inventory) {
+                const diesel = inventory.find(f => f.fuel_type === 'Diesel B7');
+                const gasoline = inventory.find(f => f.fuel_type === 'Gasoline 95');
+                document.getElementById('dash-diesel-stock').innerHTML = `${diesel ? Number(diesel.current_balance).toLocaleString() : '0.00'} <span class="text-sm font-normal text-gray-500">ลิตร</span>`;
+                document.getElementById('dash-gasoline-stock').innerHTML = `${gasoline ? Number(gasoline.current_balance).toLocaleString() : '0.00'} <span class="text-sm font-normal text-gray-500">ลิตร</span>`;
+            }
+        }
+
+        // ฟังก์ชันดึงข้อมูลรายชื่อแผนกเพื่อใส่ใน Dropdown ตัวเลือกต่างๆ
+        async function fetchDepartments() {
+            let { data: depts } = await supabase.from('departments').select('*').order('name', { ascending: true });
+            if (depts) {
+                const selects = [document.getElementById('select-dept-allocate'), document.getElementById('select-dept-withdraw')];
+                selects.forEach(select => {
+                    select.innerHTML = depts.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+                });
+            }
+        }
+
+        // ฟังก์ชันดึงตารางสรุปยอดงบบัญชีของแต่ละหน่วยงาน
+        async function fetchBudgets() {
+            let { data: budgets } = await supabase.from('department_budgets').select('*, departments(name)');
+            if (budgets) {
+                const tbody = document.getElementById('table-budgets');
+                let totalAllocated = 0;
+                let totalUsed = 0;
+
+                tbody.innerHTML = budgets.map(b => {
+                    const remaining = Number(b.allocated_liters) - Number(b.used_liters);
+                    totalAllocated += Number(b.allocated_liters);
+                    totalUsed += Number(b.used_liters);
+
+                    return `
+                        <tr class="hover:bg-gray-50">
+                            <td class="p-3 font-medium text-gray-700">${b.departments?.name || 'ไม่ทราบหน่วยงาน'}</td>
+                            <td class="p-3"><span class="px-2 py-1 rounded text-xs font-semibold ${b.fuel_type === 'Diesel B7' ? 'bg-amber-100 text-amber-800':'bg-red-100 text-red-800'}">${b.fuel_type}</span></td>
+                            <td class="p-3 text-right font-semibold text-gray-600">${Number(b.allocated_liters).toLocaleString()}</td>
+                            <td class="p-3 text-right text-red-600">${Number(b.used_liters).toLocaleString()}</td>
+                            <td class="p-3 text-right font-bold text-emerald-600">${remaining.toLocaleString()}</td>
+                        </tr>
+                    `;
+                }).join('');
+
+                // อัปเดตตัวเลขการจัดสรรและการใช้ไปรวมลงบน แดชบอร์ด
+                document.getElementById('dash-total-allocated').innerHTML = `${totalAllocated.toLocaleString()} <span class="text-sm font-normal text-gray-500">ลิตร</span>`;
+                document.getElementById('dash-total-used').innerHTML = `${totalUsed.toLocaleString()} <span class="text-sm font-normal text-gray-500">ลิตร</span>`;
+            }
+        }
+
+        // ฟังก์ชันดึงประวัติการทำธุรกรรมทั้งหมดในระบบ
+        async function fetchTransactions() {
+            let { data: txs } = await supabase.from('fuel_transactions').select('*, departments(name)').order('created_at', { ascending: false });
+            if (txs) {
+                const tbody = document.getElementById('table-transactions');
+                tbody.innerHTML = txs.map(t => {
+                    let typeBadge = '';
+                    if (t.transaction_type === 'RECEIVE') typeBadge = '<span class="bg-emerald-100 text-emerald-800 text-xs px-2.5 py-0.5 rounded font-bold"><i class="fa-solid fa-plus-circle mr-1"></i>รับเข้า</span>';
+                    if (t.transaction_type === 'WITHDRAW') typeBadge = '<span class="bg-red-100 text-red-800 text-xs px-2.5 py-0.5 rounded font-bold"><i class="fa-solid fa-minus-circle mr-1"></i>เบิกจ่าย</span>';
+                    if (t.transaction_type === 'ALLOCATE') typeBadge = '<span class="bg-indigo-100 text-indigo-800 text-xs px-2.5 py-0.5 rounded font-bold"><i class="fa-solid fa-arrow-trend-up mr-1"></i>ตั้งยอด</span>';
+
+                    const dateStr = new Date(t.created_at).toLocaleString('th-TH');
+                    return `
+                        <tr class="hover:bg-gray-50 transition-colors">
+                            <td class="p-3 text-gray-500 whitespace-nowrap">${dateStr}</td>
+                            <td class="p-3">${typeBadge}</td>
+                            <td class="p-3 font-semibold">${t.fuel_type}</td>
+                            <td class="p-3 text-gray-600">${t.departments?.name || '- คลังใหญ่ -'}</td>
+                            <td class="p-3 text-right font-bold ${t.transaction_type==='WITHDRAW'?'text-red-600':'text-gray-800'}">${Number(t.amount).toLocaleString()}</td>
+                            <td class="p-3 text-gray-500 text-xs max-w-xs truncate" title="${t.notes || ''}">${t.notes || '-'}</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+        }
+
+        // รีเฟรชหน้าจอทั้งหมดเมื่อมีข้อมูลเปลี่ยนแปลง
+        function refreshAllData() {
+            fetchDashboard();
+            fetchBudgets();
+            fetchTransactions();
+        }
+
+        // ====================================================================
+        // EVENT HANDLERS: การทำธุรกรรมและจัดการคลังน้ำมัน
+        // ====================================================================
+
+        // บันทึกธุรกรรมที่ 1: รับน้ำมันเข้าคลังใหญ่ (RECEIVE)
+        document.getElementById('form-receive').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const fuelType = formData.get('fuel_type');
+            const amount = parseFloat(formData.get('amount'));
+            const notes = formData.get('notes');
+
+            // 1. ดึงข้อมูลคลังปัจจุบัน เพื่อมาบวกยอดเพิ่ม
+            let { data: inv } = await supabase.from('fuel_inventory').select('current_balance').eq('fuel_type', fuelType).single();
+            const newBalance = inv ? Number(inv.current_balance) + amount : amount;
+
+            // 2. อัปเดตยอดคงเหลือที่ตลังหลัก
+            await supabase.from('fuel_inventory').upsert({ fuel_type: fuelType, current_balance: newBalance });
+            // 3. บันทึกประวัติลงตาราง
+            await supabase.from('fuel_transactions').insert({ transaction_type: 'RECEIVE', fuel_type: fuelType, amount: amount, notes: notes });
+
+            alert(`บันทึกรับเข้าคลังเรียบร้อย: ${fuelType} +${amount} ลิตร`);
+            e.target.reset();
+            refreshAllData();
+        });
+
+        // บันทึกธุรกรรมที่ 2: ตั้งยอดบัญชีให้หน่วยงาน (ALLOCATE)
+        document.getElementById('form-allocate').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const deptId = parseInt(formData.get('department_id'));
+            const fuelType = formData.get('fuel_type');
+            const amount = parseFloat(formData.get('amount'));
+
+            // 1. เช็คสิทธิ์และอัปเดตหรือสร้างยอดงบบัญชีใหม่ของแผนกนั้นๆ
+            let { data: bud } = await supabase.from('department_budgets').select('allocated_liters').eq('department_id', deptId).eq('fuel_type', fuelType).single();
+            const newAllocated = bud ? Number(bud.allocated_liters) + amount : amount;
+
+            await supabase.from('department_budgets').upsert({ department_id: deptId, fuel_type: fuelType, allocated_liters: newAllocated }, { onConflict: 'department_id,fuel_type' });
+            // 2. บันทึกประวัติ
+            await supabase.from('fuel_transactions').insert({ transaction_type: 'ALLOCATE', fuel_type: fuelType, department_id: deptId, amount: amount, notes: 'ตั้ง/เพิ่มยอดบัญชีประจำงวด' });
+
+            alert(`ตั้งยอดบัญชีหน่วยงานสำเร็จเรียบร้อยแล้ว!`);
+            e.target.reset();
+            refreshAllData();
+        });
+
+        // บันทึกธุรกรรมที่ 3: เบิกจ่ายน้ำมัน (WITHDRAW)
+        document.getElementById('form-withdraw').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const deptId = parseInt(formData.get('department_id'));
+            const fuelType = formData.get('fuel_type');
+            const amount = parseFloat(formData.get('amount'));
+            const notes = formData.get('notes');
+
+            // 1. ตรวจสอบสิทธิ์ว่า ยอดคงเหลือของแผนก มีเพียงพอให้เบิกหรือไม่
+            let { data: bud } = await supabase.from('department_budgets').select('allocated_liters, used_liters').eq('department_id', deptId).eq('fuel_type', fuelType).single();
+            if (!bud || (Number(bud.allocated_liters) - Number(bud.used_liters)) < amount) {
+                alert('❌ ไม่สามารถทำรายการได้เนื่องจาก: ยอดในบัญชีของหน่วยงานนี้มีไม่เพียงพอให้เบิก!');
+                return;
+            }
+
+            // 2. ตรวจสอบว่า น้ำมันในคลังใหญ่ (Inventory) มีเพียงพอให้ตัดยอดหรือไม่
+            let { data: inv } = await supabase.from('fuel_inventory').select('current_balance').eq('fuel_type', fuelType).single();
+            if (!inv || Number(inv.current_balance) < amount) {
+                alert('❌ ไม่สามารถทำรายการได้เนื่องจาก: น้ำมันคงคลังในคลังใหญ่มีไม่เพียงพอสำหรับการเบิกจ่าย!');
+                return;
+            }
+
+            // 3. หากตรวจสอบผ่านหมด ให้ดำเนินการตัดยอดคลังหลัก และ เพิ่มยอดใช้ของแผนก
+            const newInvBalance = Number(inv.current_balance) - amount;
+            const newUsedLiters = Number(bud.used_liters) + amount;
+
+            await supabase.from('fuel_inventory').update({ current_balance: newInvBalance }).eq('fuel_type', fuelType);
+            await supabase.from('department_budgets').update({ used_liters: newUsedLiters }).eq('department_id', deptId).eq('fuel_type', fuelType);
+            
+            // 4. บันทึกประวัติธุรกรรม
+            await supabase.from('fuel_transactions').insert({ transaction_type: 'WITHDRAW', fuel_type: fuelType, department_id: deptId, amount: amount, notes: notes });
+
+            alert(`ทำรายการเบิกจ่ายน้ำมันสำเร็จลุล่วง!`);
+            e.target.reset();
+            refreshAllData();
+        });
+    </script>
+</body>
+</html>
